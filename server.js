@@ -3,7 +3,7 @@ import cors from "cors";
 import { chromium } from "playwright";
 import { parseStringPromise } from "xml2js";
 import { Agent } from "undici";
-import { watch, readFileSync } from "node:fs";
+import { watch } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -14,21 +14,21 @@ app.use(express.static("public")); // serves the UI
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const indexHtmlPath = path.join(__dirname, "public", "index.html");
 const hmrClients = new Set();
 
-function extractInlineCss(html) {
-  const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
-  return styleMatch ? styleMatch[1] : null;
+const DEBUG_ENV =
+  process.env.SITEMAP_CHECKER_DEBUG === "1" ||
+  process.env.DEBUG === "sitemap-checker";
+
+function ts() {
+  return new Date().toISOString();
 }
 
-function readInlineCssFromIndex() {
-  try {
-    const html = readFileSync(indexHtmlPath, "utf8");
-    return extractInlineCss(html);
-  } catch {
-    return null;
-  }
+function makeDbg(enabled) {
+  return (...args) => {
+    if (!enabled) return;
+    console.log(`[sitemap-checker ${ts()}]`, ...args);
+  };
 }
 
 function sendHmrEvent(payload) {
@@ -42,31 +42,38 @@ function sendHmrEvent(payload) {
   }
 }
 
-let lastInlineCss = readInlineCssFromIndex();
-let hmrDebounceTimer;
+let tailwindDebounceTimer;
 
-watch(indexHtmlPath, { persistent: true }, (eventType) => {
-  if (eventType !== "change") return;
-  clearTimeout(hmrDebounceTimer);
-  hmrDebounceTimer = setTimeout(() => {
-    const nextCss = readInlineCssFromIndex();
-    if (nextCss !== null && nextCss !== lastInlineCss) {
-      lastInlineCss = nextCss;
-      sendHmrEvent({ type: "css_update", css: nextCss });
-      return;
-    }
-    sendHmrEvent({ type: "reload" });
-  }, 75);
+watch(path.join(__dirname, "public"), { persistent: true }, (eventType, filename) => {
+  if (filename !== "tailwind.css") return;
+  if (eventType !== "change" && eventType !== "rename") return;
+  clearTimeout(tailwindDebounceTimer);
+  tailwindDebounceTimer = setTimeout(() => {
+    sendHmrEvent({ type: "tailwind_update" });
+  }, 50);
 });
 
 app.get("/hmr", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
   res.flushHeaders();
+  res.socket?.setKeepAlive(true);
+  res.socket?.setNoDelay(true);
+  res.socket?.setTimeout(0);
 
   hmrClients.add(res);
+  res.write(`data: ${JSON.stringify({ type: "connected" })}\n\n`);
+
+  const heartbeat = setInterval(() => {
+    if (res.writableEnded) return;
+    // SSE comment line used as keepalive heartbeat.
+    res.write(": keepalive\n\n");
+  }, 15000);
+
   req.on("close", () => {
+    clearInterval(heartbeat);
     hmrClients.delete(res);
   });
 });
@@ -88,11 +95,54 @@ const insecureTlsDispatcher = new Agent({
   connect: { rejectUnauthorized: false },
 });
 
-function fetchSitemap(url) {
+/** xml2js: repeated tags → array; a single tag → object. Always normalize before .map(). */
+function asArray(v) {
+  if (v == null) return [];
+  return Array.isArray(v) ? v : [v];
+}
+
+async function fetchSitemap(url, dbg = () => {}) {
+  const timeoutMs = Number(process.env.SITEMAP_FETCH_TIMEOUT_MS || 15000);
+  const t0 = Date.now();
+  dbg("fetch start", url, { timeoutMs, insecureTls: allowInsecureTlsForUrl(url) });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   const opts = allowInsecureTlsForUrl(url)
-    ? { dispatcher: insecureTlsDispatcher }
-    : {};
-  return fetch(url, opts);
+    ? { dispatcher: insecureTlsDispatcher, signal: controller.signal }
+    : { signal: controller.signal };
+  try {
+    const res = await fetch(url, opts);
+    dbg("fetch ok", url, res.status, `${Date.now() - t0}ms`);
+    return res;
+  } catch (e) {
+    dbg("fetch error", url, e.message, e.cause?.message || "", `${Date.now() - t0}ms`);
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function locsFromUrlset(urlset) {
+  if (!urlset?.url) return [];
+  return asArray(urlset.url)
+    .map((u) => asArray(u.loc)[0])
+    .filter(Boolean);
+}
+
+async function mapWithConcurrency(items, concurrency, worker) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+
+  async function runner() {
+    while (nextIndex < items.length) {
+      const current = nextIndex++;
+      results[current] = await worker(items[current], current);
+    }
+  }
+
+  const workerCount = Math.max(1, Math.min(concurrency, items.length));
+  await Promise.all(Array.from({ length: workerCount }, () => runner()));
+  return results;
 }
 
 /** Drop matches that sit inside `excludeWithin` (any ancestor matches that selector). */
@@ -113,29 +163,65 @@ async function filterExcludeWithin(elements, excludeWithin) {
   return kept;
 }
 
-async function fetchAllUrls(baseUrl) {
-  const res = await fetchSitemap(new URL("/sitemap.xml", baseUrl).href);
+async function fetchAllUrls(baseUrl, onStatus = () => {}, dbg = () => {}) {
+  const rootUrl = new URL("/sitemap.xml", baseUrl).href;
+  dbg("sitemap root", rootUrl);
+  const res = await fetchSitemap(rootUrl, dbg);
   if (!res.ok) throw new Error(`Sitemap fetch failed: ${res.status}`);
   const xml = await res.text();
+  dbg("root XML bytes", xml.length);
   const parsed = await parseStringPromise(xml);
+  dbg("parsed keys", Object.keys(parsed));
 
   if (parsed.sitemapindex) {
-    const sitemapUrls = parsed.sitemapindex.sitemap.map((s) => s.loc[0]);
-    const allUrls = [];
-    for (const url of sitemapUrls) {
-      const subRes = await fetchSitemap(url);
-      const subXml = await subRes.text();
-      const subParsed = await parseStringPromise(subXml);
-      allUrls.push(...subParsed.urlset.url.map((u) => u.loc[0]));
+    const sitemapUrls = asArray(parsed.sitemapindex.sitemap)
+      .map((s) => asArray(s.loc)[0])
+      .filter(Boolean);
+    dbg("sitemap index", { childSitemaps: sitemapUrls.length });
+    onStatus(`Found ${sitemapUrls.length} child sitemap(s)...`);
+
+    const errors = [];
+    const urlGroups = await mapWithConcurrency(sitemapUrls, 6, async (url, idx) => {
+      try {
+        const subRes = await fetchSitemap(url, dbg);
+        if (!subRes.ok) {
+          throw new Error(`Sub-sitemap fetch failed (${url}): ${subRes.status}`);
+        }
+        const subXml = await subRes.text();
+        dbg("child XML", idx + 1, url, "bytes", subXml.length);
+        const subParsed = await parseStringPromise(subXml);
+        const locs = locsFromUrlset(subParsed.urlset);
+        dbg("child urls", idx + 1, locs.length);
+        onStatus(`Fetched child sitemap ${idx + 1}/${sitemapUrls.length}`);
+        return locs;
+      } catch (e) {
+        errors.push(e.message);
+        dbg("child sitemap error", idx + 1, url, e.message);
+        onStatus(`Child sitemap ${idx + 1}/${sitemapUrls.length} failed`);
+        return [];
+      }
+    });
+
+    if (sitemapUrls.length > 0 && errors.length === sitemapUrls.length) {
+      throw new Error(`All child sitemaps failed. First error: ${errors[0]}`);
     }
-    return allUrls;
+    if (errors.length > 0) {
+      onStatus(`Continuing with ${errors.length} failed child sitemap(s)`);
+    }
+
+    const flat = urlGroups.flat();
+    dbg("merged URL count", flat.length);
+    return flat;
   }
-  return parsed.urlset.url.map((u) => u.loc[0]);
+  const direct = locsFromUrlset(parsed.urlset);
+  dbg("flat urlset URL count", direct.length);
+  return direct;
 }
 
 // SSE endpoint — streams results back to the UI in real time
 app.post("/scan", async (req, res) => {
-  const { siteUrl, checks } = req.body;
+  const { siteUrl, checks, debug: bodyDebug } = req.body;
+  const dbg = makeDbg(DEBUG_ENV || Boolean(bodyDebug));
   let cancelled = false;
   let browser;
 
@@ -143,12 +229,22 @@ app.post("/scan", async (req, res) => {
   res.setHeader("Cache-Control", "no-cache");
   res.flushHeaders();
 
-  req.on("close", () => {
+  /** Do not use `req.on("close")` for cancel — it can fire after the POST body is fully read (false positive). */
+  function stopScan(reason) {
+    if (cancelled) return;
     cancelled = true;
-    // Stop Playwright quickly when client cancels the request.
-    if (browser) {
-      browser.close().catch(() => {});
+    dbg("scan stop:", reason);
+    if (browser) browser.close().catch(() => {});
+  }
+
+  req.on("aborted", () => stopScan("request aborted (client)"));
+
+  res.on("close", () => {
+    if (res.writableEnded) {
+      dbg("response stream closed (normal end)");
+      return;
     }
+    stopScan("response closed before end (client disconnected mid-stream)");
   });
 
   const send = (data) => {
@@ -158,23 +254,34 @@ app.post("/scan", async (req, res) => {
   };
 
   try {
+    dbg("scan start", { siteUrl, checks: checks?.length ?? 0, debugEnv: DEBUG_ENV, bodyDebug: Boolean(bodyDebug) });
     if (!send({ type: "status", message: "Fetching sitemap..." })) return;
-    const urls = await fetchAllUrls(siteUrl);
+    const urls = await fetchAllUrls(
+      siteUrl,
+      (message) => send({ type: "status", message }),
+      dbg
+    );
+    dbg("urls resolved", urls.length);
     if (!send({ type: "urls_found", count: urls.length })) return;
 
     if (cancelled) return;
+    dbg("launching chromium");
     browser = await chromium.launch({ headless: true });
     const ignoreHTTPSErrors = allowInsecureTlsForUrl(siteUrl);
     const context = await browser.newContext({ ignoreHTTPSErrors });
     const page = await context.newPage();
 
-    for (const url of urls) {
+    for (let i = 0; i < urls.length; i++) {
+      const url = urls[i];
       if (cancelled) break;
       if (!send({ type: "page_start", url })) break;
       const pageResults = [];
+      const pageT0 = Date.now();
+      dbg("page", i + 1, "/", urls.length, url);
 
       try {
         await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
+        dbg("page goto ok", `${Date.now() - pageT0}ms`, url);
 
         for (const check of checks) {
           if (cancelled) break;
@@ -253,6 +360,7 @@ app.post("/scan", async (req, res) => {
       }
 
       if (cancelled) break;
+      dbg("page_done", url, "checks", pageResults.length, `${Date.now() - pageT0}ms total`);
       if (!send({ type: "page_done", url, results: pageResults })) break;
     }
 
@@ -261,6 +369,7 @@ app.post("/scan", async (req, res) => {
       browser = undefined;
     }
     if (!cancelled) {
+      dbg("scan complete", urls.length, "pages");
       send({ type: "complete" });
     }
   } catch (e) {
@@ -270,6 +379,7 @@ app.post("/scan", async (req, res) => {
       cause && typeof cause === "object" && "message" in cause
         ? `${e.message}: ${cause.message}`
         : e.message;
+    dbg("scan error", message, e.stack?.split("\n").slice(0, 4).join(" | "));
     send({ type: "error", message });
   } finally {
     if (browser) {
@@ -281,6 +391,9 @@ app.post("/scan", async (req, res) => {
   }
 });
 
-app.listen(3333, () =>
-  console.log("✅ Server running at http://localhost:3333")
-);
+app.listen(3333, () => {
+  console.log("✅ Server running at http://localhost:3333");
+  if (DEBUG_ENV) {
+    console.log("🐛 Debug logging on (SITEMAP_CHECKER_DEBUG=1 or DEBUG=sitemap-checker)");
+  }
+});

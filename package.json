@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "tw:build": "tailwindcss -i ./src/tailwind.css -o ./public/tailwind.css",
+    "tw:watch": "tailwindcss -i ./src/tailwind.css -o ./public/tailwind.css --watch"
   },
   "type": "module",
   "author": "",
@@ -15,5 +17,9 @@
     "playwright": "^1.59.1",
     "undici": "^7.25.0",
     "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.4",
+    "tailwindcss": "^4.2.4"
   }
 }
