@@ -74,31 +74,48 @@ async function fetchAllUrls(baseUrl) {
 // SSE endpoint — streams results back to the UI in real time
 app.post("/scan", async (req, res) => {
   const { siteUrl, checks } = req.body;
+  let cancelled = false;
+  let browser;
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.flushHeaders();
 
-  const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+  req.on("close", () => {
+    cancelled = true;
+    // Stop Playwright quickly when client cancels the request.
+    if (browser) {
+      browser.close().catch(() => {});
+    }
+  });
+
+  const send = (data) => {
+    if (cancelled || res.writableEnded) return false;
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    return true;
+  };
 
   try {
-    send({ type: "status", message: "Fetching sitemap..." });
+    if (!send({ type: "status", message: "Fetching sitemap..." })) return;
     const urls = await fetchAllUrls(siteUrl);
-    send({ type: "urls_found", count: urls.length });
+    if (!send({ type: "urls_found", count: urls.length })) return;
 
-    const browser = await chromium.launch({ headless: true });
+    if (cancelled) return;
+    browser = await chromium.launch({ headless: true });
     const ignoreHTTPSErrors = allowInsecureTlsForUrl(siteUrl);
     const context = await browser.newContext({ ignoreHTTPSErrors });
     const page = await context.newPage();
 
     for (const url of urls) {
-      send({ type: "page_start", url });
+      if (cancelled) break;
+      if (!send({ type: "page_start", url })) break;
       const pageResults = [];
 
       try {
         await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
 
         for (const check of checks) {
+          if (cancelled) break;
           const excludeWithin = check.excludeWithin || "";
           try {
             const ex = excludeWithin.trim();
@@ -164,6 +181,7 @@ app.post("/scan", async (req, res) => {
           }
         }
       } catch (e) {
+        if (cancelled) break;
         pageResults.push({
           label: "Page load",
           selector: "-",
@@ -172,21 +190,33 @@ app.post("/scan", async (req, res) => {
         });
       }
 
-      send({ type: "page_done", url, results: pageResults });
+      if (cancelled) break;
+      if (!send({ type: "page_done", url, results: pageResults })) break;
     }
 
-    await browser.close();
-    send({ type: "complete" });
+    if (browser) {
+      await browser.close().catch(() => {});
+      browser = undefined;
+    }
+    if (!cancelled) {
+      send({ type: "complete" });
+    }
   } catch (e) {
+    if (cancelled) return;
     const cause = e.cause;
     const message =
       cause && typeof cause === "object" && "message" in cause
         ? `${e.message}: ${cause.message}`
         : e.message;
     send({ type: "error", message });
+  } finally {
+    if (browser) {
+      await browser.close().catch(() => {});
+    }
+    if (!res.writableEnded) {
+      res.end();
+    }
   }
-
-  res.end();
 });
 
 app.listen(3333, () =>
