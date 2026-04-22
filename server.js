@@ -3,11 +3,73 @@ import cors from "cors";
 import { chromium } from "playwright";
 import { parseStringPromise } from "xml2js";
 import { Agent } from "undici";
+import { watch, readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public")); // serves the UI
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const indexHtmlPath = path.join(__dirname, "public", "index.html");
+const hmrClients = new Set();
+
+function extractInlineCss(html) {
+  const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+  return styleMatch ? styleMatch[1] : null;
+}
+
+function readInlineCssFromIndex() {
+  try {
+    const html = readFileSync(indexHtmlPath, "utf8");
+    return extractInlineCss(html);
+  } catch {
+    return null;
+  }
+}
+
+function sendHmrEvent(payload) {
+  const data = `data: ${JSON.stringify(payload)}\n\n`;
+  for (const client of hmrClients) {
+    if (client.writableEnded) {
+      hmrClients.delete(client);
+      continue;
+    }
+    client.write(data);
+  }
+}
+
+let lastInlineCss = readInlineCssFromIndex();
+let hmrDebounceTimer;
+
+watch(indexHtmlPath, { persistent: true }, (eventType) => {
+  if (eventType !== "change") return;
+  clearTimeout(hmrDebounceTimer);
+  hmrDebounceTimer = setTimeout(() => {
+    const nextCss = readInlineCssFromIndex();
+    if (nextCss !== null && nextCss !== lastInlineCss) {
+      lastInlineCss = nextCss;
+      sendHmrEvent({ type: "css_update", css: nextCss });
+      return;
+    }
+    sendHmrEvent({ type: "reload" });
+  }, 75);
+});
+
+app.get("/hmr", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  hmrClients.add(res);
+  req.on("close", () => {
+    hmrClients.delete(res);
+  });
+});
 
 /** DDEV / local HTTPS certs are not in Node's trust store; relax TLS only for those hosts. */
 function allowInsecureTlsForUrl(url) {

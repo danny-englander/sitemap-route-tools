@@ -8,13 +8,13 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&display=swap"
     rel="stylesheet" />
-  <style>
+  <style id="themeStyles">
     :root {
       --bg: #0e0e0e;
       --surface: #161616;
       --surface2: #1e1e1e;
       --border: #2a2a2a;
-      --accent: #fadd23;
+      --accent: #e6be0d;
       --accent-dim: rgba(200, 241, 53, 0.12);
       --accent-glow: rgba(200, 241, 53, 0.25);
       --text: #e8e8e0;
@@ -518,7 +518,7 @@
 
   <header>
     <h1>Sitemap Inspector</h1>
-    <p>Headless markup checker for DDEV local sites</p>
+    <h2>Headless markup checker for DDEV local sites</h2>
   </header>
 
   <aside>
@@ -530,7 +530,7 @@
     <div>
       <div class="checks-header" style="margin-bottom:12px">
         <span>Selector Checks</span>
-        <button class="add-btn" onclick="addCheck()">+ ADD</button>
+        <button class="add-btn" onclick="addCheck()">+ Add more checks</button>
       </div>
       <div class="checks-list" id="checksList"></div>
     </div>
@@ -839,8 +839,30 @@
       a.click();
     }
 
+    function setupStyleHmr() {
+      const styleEl = document.getElementById('themeStyles');
+      if (!styleEl || !window.EventSource) return;
+
+      const hmr = new EventSource('/hmr');
+      hmr.onmessage = evt => {
+        try {
+          const payload = JSON.parse(evt.data);
+          if (payload.type === 'css_update' && typeof payload.css === 'string') {
+            styleEl.textContent = payload.css;
+            return;
+          }
+          if (payload.type === 'reload') {
+            window.location.reload();
+          }
+        } catch {
+          // Ignore malformed HMR payloads.
+        }
+      };
+    }
+
     // ── Init ─────────────────────────────────────────────────────────────────────
     showInitialMessage('No results yet.<br/>Enter your DDEV site URL, add selector checks,<br/>and click <strong>SCAN</strong>.');
+    setupStyleHmr();
     defaults.forEach(addCheck);
   </script>
 </body>
