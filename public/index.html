@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sitemap Inspector</title>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0e0e0e;
+    --surface: #161616;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --accent: #c8f135;
+    --accent-dim: rgba(200,241,53,0.12);
+    --accent-glow: rgba(200,241,53,0.25);
+    --text: #e8e8e0;
+    --muted: #666;
+    --pass: #4ade80;
+    --fail: #f87171;
+    --error: #fb923c;
+    --mono: 'Courier Prime', monospace;
+    --display: 'Bebas Neue', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  /* HEADER */
+  header {
+    grid-column: 1 / -1;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    background: var(--surface);
+  }
+  header h1 {
+    font-family: var(--display);
+    font-size: 36px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    line-height: 1;
+  }
+  header p {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* SIDEBAR */
+  aside {
+    grid-row: 2;
+    border-right: 1px solid var(--border);
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto;
+    background: var(--surface);
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  label {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  input[type="text"], input[type="url"], select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 9px 12px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus {
+    border-color: var(--accent);
+  }
+  select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+  }
+
+  /* CHECKS */
+  .checks-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .checks-header span {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .add-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 4px 10px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: background 0.15s;
+  }
+  .add-btn:hover { background: rgba(200,241,53,0.22); }
+
+  .checks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .check-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 12px;
+    display: grid;
+    gap: 8px;
+    position: relative;
+    animation: slideIn 0.2s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .check-card input, .check-card select {
+    font-size: 12px;
+    padding: 7px 10px;
+  }
+  .check-card-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .remove-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    transition: color 0.15s;
+    font-family: var(--mono);
+  }
+  .remove-btn:hover { color: var(--fail); }
+
+  /* RUN BUTTON */
+  .run-btn {
+    font-family: var(--display);
+    font-size: 22px;
+    letter-spacing: 3px;
+    background: var(--accent);
+    color: #0e0e0e;
+    border: none;
+    padding: 14px;
+    cursor: pointer;
+    width: 100%;
+    transition: opacity 0.15s, transform 0.1s;
+    position: relative;
+    overflow: hidden;
+  }
+  .run-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+  .run-btn:active:not(:disabled) { transform: translateY(0); }
+  .run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .run-btn.running {
+    background: var(--surface2);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  /* MAIN RESULTS PANEL */
+  main {
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .results-toolbar {
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .stat { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .stat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .stat-dot.pass { background: var(--pass); }
+  .stat-dot.fail { background: var(--fail); }
+  .stat-dot.error { background: var(--error); }
+  .stat-count { font-weight: 700; color: var(--text); }
+  .stat-label { color: var(--muted); }
+
+  .status-msg {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    font-style: italic;
+  }
+  .export-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 5px 12px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.15s;
+    margin-left: auto;
+  }
+  .export-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .export-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .results-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .progress-panel {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 14px;
+    display: none;
+    gap: 10px;
+  }
+  .progress-panel.active { display: grid; }
+  .progress-topline {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .progress-track {
+    width: 100%;
+    height: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .progress-fill {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+    transition: width 0.2s ease;
+  }
+
+  /* Empty state */
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    gap: 12px;
+    padding: 40px;
+    text-align: center;
+  }
+  .empty-state svg { opacity: 0.2; }
+  .empty-state p { font-size: 13px; line-height: 1.6; }
+
+  .hits-table-wrap {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .hits-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .hits-table thead {
+    background: var(--surface2);
+  }
+  .hits-table th,
+  .hits-table td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .hits-table tbody tr:nth-child(even) {
+    background: rgba(255,255,255,0.015);
+  }
+  .hits-table th {
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 400;
+  }
+  .hits-table td {
+    color: var(--text);
+  }
+  .hits-table a {
+    color: var(--accent);
+    text-decoration: none;
+    word-break: break-all;
+  }
+  .hits-table a:hover { text-decoration: underline; }
+  .hit-count {
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Sitemap Inspector</h1>
+  <p>Headless markup checker for DDEV local sites</p>
+</header>
+
+<aside>
+  <div class="field-group">
+    <label>DDEV Site URL</label>
+    <input type="url" id="siteUrl" placeholder="https://mysite.ddev.site" />
+  </div>
+
+  <div>
+    <div class="checks-header" style="margin-bottom:12px">
+      <span>Selector Checks</span>
+      <button class="add-btn" onclick="addCheck()">+ ADD</button>
+    </div>
+    <div class="checks-list" id="checksList"></div>
+  </div>
+
+  <button class="run-btn" id="runBtn" onclick="runScan()">SCAN</button>
+</aside>
+
+<main>
+  <div class="results-toolbar">
+    <div class="stat">
+      <div class="stat-dot pass"></div>
+      <span class="stat-count" id="countPass">0</span>
+      <span class="stat-label">passed</span>
+    </div>
+    <div class="stat">
+      <div class="stat-dot fail"></div>
+      <span class="stat-count" id="countFail">0</span>
+      <span class="stat-label">failed</span>
+    </div>
+    <div class="stat">
+      <div class="stat-dot error"></div>
+      <span class="stat-count" id="countError">0</span>
+      <span class="stat-label">errors</span>
+    </div>
+    <span class="status-msg" id="statusMsg">Configure checks and click SCAN</span>
+    <button class="export-btn" id="exportBtn" onclick="exportReport()" disabled>EXPORT JSON</button>
+  </div>
+  <div class="results-scroll" id="resultsScroll">
+    <div class="progress-panel" id="progressPanel">
+      <div class="progress-topline">
+        <span id="progressLabel">Preparing scan…</span>
+        <span id="progressCount">0 / 0</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+    <div id="hitsContainer"></div>
+  </div>
+</main>
+
+<script>
+  const SERVER = 'http://localhost:3333';
+  let reportData = [];
+  let stats = { pass: 0, fail: 0, error: 0 };
+  let scanProgress = { total: 0, done: 0 };
+  let hitRows = [];
+
+  // ── Default checks ──────────────────────────────────────────────────────────
+  const defaults = [
+    { label: 'Has <main> landmark', selector: 'main',              expected: 'present' },
+    { label: 'Has H1',             selector: 'h1',                expected: 'present' },
+    { label: 'No missing alt text',selector: 'img:not([alt])',    expected: 'absent'  },
+  ];
+
+  function addCheck(data = {}) {
+    const id = Date.now();
+    const list = document.getElementById('checksList');
+    const card = document.createElement('div');
+    card.className = 'check-card';
+    card.dataset.id = id;
+    card.innerHTML = `
+      <button class="remove-btn" onclick="removeCheck(${id})" title="Remove">×</button>
+      <input type="text" placeholder="Label (e.g. Has cookie banner)" value="${data.label || ''}" data-field="label" />
+      <div class="check-card-row">
+        <input type="text" placeholder="Selector (.class, #id, tag)" value="${data.selector || ''}" data-field="selector" />
+        <select data-field="expected">
+          <option value="present" ${data.expected === 'present' ? 'selected' : ''}>Present</option>
+          <option value="absent"  ${data.expected === 'absent'  ? 'selected' : ''}>Absent</option>
+          <option value="custom"  ${data.expected && data.expected !== 'present' && data.expected !== 'absent' ? 'selected' : ''}>Contains text…</option>
+        </select>
+      </div>
+      <input type="text" placeholder="Exclude if inside (optional; comma = OR, e.g. #flyout, #modal, .drawer)" value="${data.excludeWithin || ''}" data-field="excludeWithin" />
+      <input type="text" placeholder='Text to find in element' data-field="textMatch" style="display:${data.expected && data.expected !== 'present' && data.expected !== 'absent' ? 'block' : 'none'}" value="${data.expected && data.expected !== 'present' && data.expected !== 'absent' ? data.expected : ''}" />
+    `;
+    card.querySelector('[data-field="expected"]').addEventListener('change', function() {
+      card.querySelector('[data-field="textMatch"]').style.display = this.value === 'custom' ? 'block' : 'none';
+    });
+    list.appendChild(card);
+  }
+
+  function removeCheck(id) {
+    document.querySelector(`.check-card[data-id="${id}"]`)?.remove();
+  }
+
+  function getChecks() {
+    return [...document.querySelectorAll('.check-card')].map(card => {
+      const label    = card.querySelector('[data-field="label"]').value.trim();
+      const selector = card.querySelector('[data-field="selector"]').value.trim();
+      const expSel   = card.querySelector('[data-field="expected"]').value;
+      const textMatch= card.querySelector('[data-field="textMatch"]').value.trim();
+      return {
+        label:    label || selector,
+        selector,
+        expected: expSel === 'custom' ? textMatch : expSel,
+        excludeWithin: card.querySelector('[data-field="excludeWithin"]').value.trim(),
+      };
+    }).filter(c => c.selector);
+  }
+
+  function hasHit(results) {
+    return results.some(r => r.status === 'pass');
+  }
+
+  function showInitialMessage(message) {
+    const container = document.getElementById('hitsContainer');
+    container.innerHTML = `
+      <div class="empty-state">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="6" width="32" height="36" rx="2" stroke="#e8e8e0" stroke-width="2"/>
+          <path d="M16 16h16M16 22h16M16 28h10" stroke="#e8e8e0" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <p>${message}</p>
+      </div>
+    `;
+  }
+
+  function setProgress(done, total) {
+    const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+    document.getElementById('progressFill').style.width = `${pct}%`;
+    document.getElementById('progressCount').textContent = `${done} / ${total}`;
+  }
+
+  function renderHitsTable() {
+    const container = document.getElementById('hitsContainer');
+    container.innerHTML = '';
+
+    if (!hitRows.length) {
+      showInitialMessage('Scan complete.<br/>No hit URLs matched your checks.');
+      return;
+    }
+
+    const wrap = document.createElement('div');
+    wrap.className = 'hits-table-wrap';
+    const table = document.createElement('table');
+    table.className = 'hits-table';
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th style="width:56px">#</th>
+          <th>URL</th>
+          <th style="width:130px">Passes</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    `;
+
+    const tbody = table.querySelector('tbody');
+    hitRows.forEach((row, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${idx + 1}</td>
+        <td><a href="${row.url}" target="_blank" rel="noopener noreferrer">${row.url}</a></td>
+        <td><span class="hit-count">${row.passCount} check${row.passCount === 1 ? '' : 's'}</span></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    wrap.appendChild(table);
+    container.appendChild(wrap);
+  }
+
+  // ── Scan ────────────────────────────────────────────────────────────────────
+  async function runScan() {
+    const siteUrl = document.getElementById('siteUrl').value.trim().replace(/\/$/, '');
+    const checks  = getChecks();
+
+    if (!siteUrl) { alert('Please enter a DDEV site URL.'); return; }
+    if (!checks.length) { alert('Please add at least one check.'); return; }
+
+    // Reset state
+    reportData = [];
+    hitRows = [];
+    stats = { pass: 0, fail: 0, error: 0 };
+    scanProgress = { total: 0, done: 0 };
+    updateStats();
+    document.getElementById('exportBtn').disabled = true;
+    document.getElementById('progressPanel').classList.add('active');
+    document.getElementById('progressLabel').textContent = 'Preparing scan…';
+    setProgress(0, 0);
+    showInitialMessage('Scanning in progress…<br/>Results table will appear when complete.');
+
+    const btn = document.getElementById('runBtn');
+    btn.textContent = 'SCANNING…';
+    btn.classList.add('running');
+    btn.disabled = true;
+
+    setStatus('Connecting to local server…');
+
+    try {
+      const response = await fetch(`${SERVER}/scan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteUrl, checks }),
+      });
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            handleEvent(JSON.parse(line.slice(6)));
+          }
+        }
+      }
+    } catch (e) {
+      setStatus(`⚠ Could not reach local server at ${SERVER}. Is it running?`);
+    }
+
+    btn.textContent = 'SCAN';
+    btn.classList.remove('running');
+    btn.disabled = false;
+    document.getElementById('exportBtn').disabled = reportData.length === 0;
+  }
+
+  // ── SSE event handler ───────────────────────────────────────────────────────
+  function handleEvent(ev) {
+    if (ev.type === 'status')     setStatus(ev.message);
+    if (ev.type === 'urls_found') {
+      scanProgress.total = ev.count;
+      document.getElementById('progressLabel').textContent = 'Scanning URLs…';
+      setProgress(scanProgress.done, scanProgress.total);
+      setStatus(`Found ${ev.count} URLs — scanning…`);
+    }
+
+    if (ev.type === 'page_done') {
+      reportData.push({ url: ev.url, results: ev.results });
+      ev.results.forEach(r => {
+        if (r.status === 'pass')  stats.pass++;
+        if (r.status === 'fail')  stats.fail++;
+        if (r.status === 'error') stats.error++;
+      });
+      scanProgress.done++;
+      setProgress(scanProgress.done, scanProgress.total);
+      updateStats();
+
+      if (hasHit(ev.results)) {
+        hitRows.push({
+          url: ev.url,
+          passCount: ev.results.filter(r => r.status === 'pass').length,
+        });
+      }
+    }
+
+    if (ev.type === 'complete') {
+      document.getElementById('progressLabel').textContent = 'Scan complete';
+      setStatus(`Scan complete — ${reportData.length} pages checked, ${hitRows.length} hit URL${hitRows.length === 1 ? '' : 's'}`);
+      renderHitsTable();
+    }
+    if (ev.type === 'error')    setStatus(`⚠ Error: ${ev.message}`);
+  }
+
+  function setStatus(msg) {
+    document.getElementById('statusMsg').textContent = msg;
+  }
+  function updateStats() {
+    document.getElementById('countPass').textContent  = stats.pass;
+    document.getElementById('countFail').textContent  = stats.fail;
+    document.getElementById('countError').textContent = stats.error;
+  }
+
+  // ── Export ───────────────────────────────────────────────────────────────────
+  function exportReport() {
+    const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `sitemap-report-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+  }
+
+  // ── Init ─────────────────────────────────────────────────────────────────────
+  showInitialMessage('No results yet.<br/>Enter your DDEV site URL, add selector checks,<br/>and click <strong>SCAN</strong>.');
+  defaults.forEach(addCheck);
+</script>
+</body>
+</html>
