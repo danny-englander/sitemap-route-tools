@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import { chromium } from "playwright";
 import { parseStringPromise } from "xml2js";
-import { Agent } from "node:undici";
+import { Agent } from "undici";
 
 const app = express();
 app.use(cors());
