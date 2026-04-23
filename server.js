@@ -269,17 +269,24 @@ app.post("/scan", async (req, res) => {
     browser = await chromium.launch({ headless: true });
     const ignoreHTTPSErrors = allowInsecureTlsForUrl(siteUrl);
     const context = await browser.newContext({ ignoreHTTPSErrors });
-    const page = await context.newPage();
+    const scanConcurrencyRaw = Number(process.env.SITEMAP_SCAN_CONCURRENCY || 6);
+    const scanConcurrency =
+      Number.isFinite(scanConcurrencyRaw) && scanConcurrencyRaw > 0
+        ? Math.floor(scanConcurrencyRaw)
+        : 6;
+    dbg("scan workers", scanConcurrency);
+    send({ type: "status", message: `Scanning pages with ${scanConcurrency} worker(s)...` });
 
-    for (let i = 0; i < urls.length; i++) {
-      const url = urls[i];
-      if (cancelled) break;
-      if (!send({ type: "page_start", url })) break;
+    await mapWithConcurrency(urls, scanConcurrency, async (url, i) => {
+      if (cancelled) return;
+      if (!send({ type: "page_start", url })) return;
       const pageResults = [];
       const pageT0 = Date.now();
       dbg("page", i + 1, "/", urls.length, url);
+      let page;
 
       try {
+        page = await context.newPage();
         await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
         dbg("page goto ok", `${Date.now() - pageT0}ms`, url);
 
@@ -350,19 +357,23 @@ app.post("/scan", async (req, res) => {
           }
         }
       } catch (e) {
-        if (cancelled) break;
+        if (cancelled) return;
         pageResults.push({
           label: "Page load",
           selector: "-",
           status: "error",
           detail: e.message
         });
+      } finally {
+        if (page) {
+          await page.close().catch(() => {});
+        }
       }
 
-      if (cancelled) break;
+      if (cancelled) return;
       dbg("page_done", url, "checks", pageResults.length, `${Date.now() - pageT0}ms total`);
-      if (!send({ type: "page_done", url, results: pageResults })) break;
-    }
+      if (!send({ type: "page_done", url, results: pageResults })) return;
+    });
 
     if (browser) {
       await browser.close().catch(() => {});
