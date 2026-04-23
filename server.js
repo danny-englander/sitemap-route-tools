@@ -129,6 +129,20 @@ function locsFromUrlset(urlset) {
     .filter(Boolean);
 }
 
+/**
+ * Force sitemap URLs onto the provided site origin while preserving path/query/hash.
+ * This keeps scans on the user-entered environment (e.g. DDEV host).
+ */
+function rewriteUrlToBaseOrigin(url, baseUrl) {
+  try {
+    const base = new URL(baseUrl);
+    const parsed = new URL(url, base);
+    return new URL(`${parsed.pathname}${parsed.search}${parsed.hash}`, base).href;
+  } catch {
+    return url;
+  }
+}
+
 async function mapWithConcurrency(items, concurrency, worker) {
   const results = new Array(items.length);
   let nextIndex = 0;
@@ -143,6 +157,93 @@ async function mapWithConcurrency(items, concurrency, worker) {
   const workerCount = Math.max(1, Math.min(concurrency, items.length));
   await Promise.all(Array.from({ length: workerCount }, () => runner()));
   return results;
+}
+
+/**
+ * Split on commas that separate selector list entries (not commas inside (), [], or quotes).
+ * Each branch is queried separately and merged so OR behaves like running each selector alone.
+ */
+function splitTopLevelSelectorList(selector) {
+  const s = selector.trim();
+  if (!s) return [];
+  const parts = [];
+  let depth = 0;
+  let br = 0;
+  let quote = null;
+  let start = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    const prev = i > 0 ? s[i - 1] : "";
+    if (quote) {
+      if (c === quote && prev !== "\\") quote = null;
+      continue;
+    }
+    if (c === '"' || c === "'") {
+      quote = c;
+      continue;
+    }
+    if (c === "(") {
+      depth++;
+      continue;
+    }
+    if (c === ")") {
+      depth = Math.max(0, depth - 1);
+      continue;
+    }
+    if (c === "[") {
+      br++;
+      continue;
+    }
+    if (c === "]") {
+      br = Math.max(0, br - 1);
+      continue;
+    }
+    if (c === "," && depth === 0 && br === 0) {
+      const chunk = s.slice(start, i).trim();
+      if (chunk) parts.push(chunk);
+      start = i + 1;
+    }
+  }
+  const tail = s.slice(start).trim();
+  if (tail) parts.push(tail);
+  return parts.length ? parts : [s];
+}
+
+async function dedupeElementHandles(handles) {
+  const unique = [];
+  for (const h of handles) {
+    let dup = false;
+    for (const u of unique) {
+      if (await h.evaluate((a, b) => a === b, u)) {
+        dup = true;
+        await h.dispose().catch(() => {});
+        break;
+      }
+    }
+    if (!dup) unique.push(h);
+  }
+  return unique;
+}
+
+/** Resolve selector(s): top-level comma = OR; each branch is queried and merged (deduped). */
+async function queryElementsMatchingSelector(page, selector) {
+  const parts = splitTopLevelSelectorList(selector);
+  if (parts.length === 1) {
+    return page.$$(parts[0]);
+  }
+  const errors = [];
+  const merged = [];
+  for (const p of parts) {
+    try {
+      merged.push(...(await page.$$(p)));
+    } catch (e) {
+      errors.push(`${p}: ${e.message}`);
+    }
+  }
+  if (parts.length > 0 && merged.length === 0 && errors.length === parts.length) {
+    throw new Error(`Invalid selector list: ${errors.join("; ")}`);
+  }
+  return dedupeElementHandles(merged);
 }
 
 /** Drop matches that sit inside `excludeWithin` (any ancestor matches that selector). */
@@ -176,6 +277,7 @@ async function fetchAllUrls(baseUrl, onStatus = () => {}, dbg = () => {}) {
   if (parsed.sitemapindex) {
     const sitemapUrls = asArray(parsed.sitemapindex.sitemap)
       .map((s) => asArray(s.loc)[0])
+      .map((u) => rewriteUrlToBaseOrigin(u, baseUrl))
       .filter(Boolean);
     dbg("sitemap index", { childSitemaps: sitemapUrls.length });
     onStatus(`Found ${sitemapUrls.length} child sitemap(s)...`);
@@ -190,7 +292,9 @@ async function fetchAllUrls(baseUrl, onStatus = () => {}, dbg = () => {}) {
         const subXml = await subRes.text();
         dbg("child XML", idx + 1, url, "bytes", subXml.length);
         const subParsed = await parseStringPromise(subXml);
-        const locs = locsFromUrlset(subParsed.urlset);
+        const locs = locsFromUrlset(subParsed.urlset).map((u) =>
+          rewriteUrlToBaseOrigin(u, baseUrl)
+        );
         dbg("child urls", idx + 1, locs.length);
         onStatus(`Fetched child sitemap ${idx + 1}/${sitemapUrls.length}`);
         return locs;
@@ -213,7 +317,9 @@ async function fetchAllUrls(baseUrl, onStatus = () => {}, dbg = () => {}) {
     dbg("merged URL count", flat.length);
     return flat;
   }
-  const direct = locsFromUrlset(parsed.urlset);
+  const direct = locsFromUrlset(parsed.urlset).map((u) =>
+    rewriteUrlToBaseOrigin(u, baseUrl)
+  );
   dbg("flat urlset URL count", direct.length);
   return direct;
 }
@@ -305,7 +411,7 @@ app.post("/scan", async (req, res) => {
               }
             }
 
-            let elements = await page.$$(check.selector);
+            let elements = await queryElementsMatchingSelector(page, check.selector);
             elements = await filterExcludeWithin(elements, excludeWithin);
 
             let status, detail;

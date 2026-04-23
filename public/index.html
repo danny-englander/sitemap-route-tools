@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sitemap Inspector</title>
+  <title>Sitemap route tools</title>
   <link rel="icon" type="image/svg+xml" href="/hexagon.svg" />
   <link
     href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&display=swap"
@@ -48,7 +48,7 @@
       class="flex shrink-0 items-baseline gap-4 border-b border-zinc-800 bg-zinc-900 px-8 py-5">
       <h1
         class="font-display text-4xl leading-none tracking-widest text-yellow-500">
-        Sitemap Inspector</h1>
+        Sitemap route tools</h1>
       <h2 class="text-xs uppercase tracking-widest text-zinc-400">Headless
         markup checker for DDEV local sites</h2>
     </header>
@@ -141,10 +141,15 @@
     let stats = { pass: 0, fail: 0, error: 0 };
     let scanProgress = { total: 0, done: 0 };
     let hitRows = [];
+    let scanStartedAtMs = null;
     let currentScanController = null;
     let isScanning = false;
     /** When true, log each SSE payload to the browser console (checkbox or ?debug=1). */
     let clientScanDebug = false;
+
+    function formatSeconds(elapsedMs) {
+      return (Math.max(0, elapsedMs) / 1000).toFixed(1);
+    }
 
     // ── Default checks ──────────────────────────────────────────────────────────
     const defaults = [
@@ -161,7 +166,7 @@
       <button class="absolute right-2 top-0 h-7 w-7 cursor-pointer rounded-full bg-yellow-500 pb-px text-2xl leading-none text-zinc-950 transition hover:text-rose-400" onclick="removeCheck(${id})" title="Remove">×</button>
       <input class="w-full border border-zinc-700 bg-zinc-950 px-2.5 py-2 text-xs text-zinc-100 outline-none transition focus:border-yellow-500" type="text" placeholder="Label (e.g. Has cookie banner)" value="${data.label || ''}" data-field="label" />
       <div class="grid grid-cols-2 gap-2">
-        <input class="w-full border border-zinc-700 bg-zinc-950 px-2.5 py-2 text-xs text-zinc-100 outline-none transition focus:border-yellow-500" type="text" placeholder="Selector (.class, #id, tag)" value="${data.selector || ''}" data-field="selector" />
+        <input class="w-full border border-zinc-700 bg-zinc-950 px-2.5 py-2 text-xs text-zinc-100 outline-none transition focus:border-yellow-500" type="text" placeholder="Selector; top-level comma = OR (e.g. .a, #b)" value="${data.selector || ''}" data-field="selector" />
         <select class="w-full border border-zinc-700 bg-zinc-950 px-2.5 py-2 text-xs text-zinc-100 outline-none transition focus:border-yellow-500" data-field="expected">
           <option value="present" ${data.expected === 'present' ? 'selected' : ''}>Present</option>
           <option value="absent"  ${data.expected === 'absent' ? 'selected' : ''}>Absent</option>
@@ -295,6 +300,7 @@
       setProgress(0, 0);
       showInitialMessage('Scanning in progress…<br/>Results table will appear when complete.');
       currentScanController = new AbortController();
+      scanStartedAtMs = Date.now();
 
       setScanningState(true);
 
@@ -380,8 +386,15 @@
       }
 
       if (ev.type === 'complete') {
+        const elapsedSeconds = scanStartedAtMs == null
+          ? null
+          : formatSeconds(Date.now() - scanStartedAtMs);
         document.getElementById('progressLabel').textContent = 'Scan complete';
-        setStatus(`Scan complete — ${reportData.length} pages checked, ${hitRows.length} hit URL${hitRows.length === 1 ? '' : 's'}`);
+        setStatus(
+          elapsedSeconds == null
+            ? `Scan complete — ${reportData.length} pages checked, ${hitRows.length} hit URL${hitRows.length === 1 ? '' : 's'}`
+            : `The scan finished in ${elapsedSeconds} seconds — ${reportData.length} pages checked, ${hitRows.length} hit URL${hitRows.length === 1 ? '' : 's'}`
+        );
         renderHitsTable();
       }
       if (ev.type === 'error') setStatus(`⚠ Error: ${ev.message}`);
