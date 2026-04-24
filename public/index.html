@@ -242,7 +242,8 @@
         <tr>
           <th class="border-b border-zinc-800 px-3 py-2.5 text-left text-xs font-normal uppercase tracking-widest text-zinc-400" style="width:56px">#</th>
           <th class="border-b border-zinc-800 px-3 py-2.5 text-left text-xs font-normal uppercase tracking-widest text-zinc-400">URL</th>
-          <th class="border-b border-zinc-800 px-3 py-2.5 text-left text-xs font-normal uppercase tracking-widest text-zinc-400" style="width:130px">Passes</th>
+          <th class="border-b border-zinc-800 px-3 py-2.5 text-left text-xs font-normal uppercase tracking-widest text-zinc-400" style="width:180px">excludeWithin</th>
+          <th class="border-b border-zinc-800 px-3 py-2.5 text-left text-xs font-normal uppercase tracking-widest text-zinc-400">detail</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -252,10 +253,17 @@
       hitRows.forEach((row, idx) => {
         const tr = document.createElement('tr');
         if (idx % 2 === 1) tr.className = 'bg-white/5';
+        const excludeWithinHtml = row.passResults
+          .map((r) => r.excludeWithin || '-')
+          .join('<br/>');
+        const detailHtml = row.passResults
+          .map((r) => r.detail || '-')
+          .join('<br/>');
         tr.innerHTML = `
         <td class="border-b border-zinc-800 px-3 py-2.5 text-zinc-100">${idx + 1}</td>
         <td class="border-b border-zinc-800 px-3 py-2.5 text-zinc-100"><a class="break-all text-yellow-500 hover:underline" href="${row.url}" target="_blank" rel="noopener noreferrer">${row.url}</a></td>
-        <td class="border-b border-zinc-800 px-3 py-2.5"><span class="text-xs text-zinc-400">${row.passCount} check${row.passCount === 1 ? '' : 's'}</span></td>
+        <td class="border-b border-zinc-800 px-3 py-2.5 text-zinc-300">${excludeWithinHtml}</td>
+        <td class="border-b border-zinc-800 px-3 py-2.5 text-zinc-300">${detailHtml}</td>
       `;
         tbody.appendChild(tr);
       });
@@ -344,7 +352,7 @@
       } finally {
         currentScanController = null;
         setScanningState(false);
-        document.getElementById('exportBtn').disabled = reportData.length === 0;
+        document.getElementById('exportBtn').disabled = hitRows.length === 0;
       }
     }
 
@@ -378,9 +386,10 @@
         updateStats();
 
         if (hasHit(ev.results)) {
+          const passResults = ev.results.filter(r => r.status === 'pass');
           hitRows.push({
             url: ev.url,
-            passCount: ev.results.filter(r => r.status === 'pass').length,
+            passResults,
           });
         }
       }
@@ -411,10 +420,16 @@
 
     // ── Export ───────────────────────────────────────────────────────────────────
     function exportReport() {
-      const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
+      const hitsOnly = reportData
+        .filter((entry) => hasHit(entry.results))
+        .map((entry) => ({
+          url: entry.url,
+          results: entry.results.filter((r) => r.status === 'pass'),
+        }));
+      const blob = new Blob([JSON.stringify(hitsOnly, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `sitemap-report-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `sitemap-hits-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
     }
 
