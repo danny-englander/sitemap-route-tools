@@ -429,7 +429,8 @@
       const blob = new Blob([JSON.stringify(hitsOnly, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `sitemap-hits-${new Date().toISOString().slice(0, 10)}.json`;
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      a.download = `sitemap-hits-${timestamp}.json`;
       a.click();
     }
 
