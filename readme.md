@@ -3,7 +3,7 @@
 ![Screenshot of the UI](screen.png)
 
 ## Introduiction
-Sitemap route tools can query an xml sitemap (typically located at https://example.com/sitemap.xml) and check for the presence of selectors on the pages linked in the sitemap.
+Sitemap route tools can query an xml sitemap (typically located at https://example.com/sitemap.xml) and check for the presence of selectors on the pages linked in the sitemap. You can also use this on a localhost site, for example a ddev instance.
 
 ## Installation
 Ensure node 24 is installed or you have nvm installed and use the .nvmrc file to set the correct node version.
@@ -20,7 +20,7 @@ node server.js
 You will see the url in terminal: `http://localhost:3333`
 
 ## Usage
-- Enter the DDEV site URL in the "DDEV Site URL" field.
+- Enter any site URL that has an xml sitemap (located at https://example.com/sitemap.xml) in the "Site URL" field.
 - Use the various fields in the UI to configure the checks you want to run.
 - The fields are:
   - Label: A label for the check. (Useful for the exported report to identify the check)
