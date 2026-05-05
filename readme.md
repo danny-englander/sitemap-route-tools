@@ -2,7 +2,7 @@
 
 ![Screenshot of the UI](screen.png)
 
-## Introduiction
+## Introduction
 Sitemap route tools can query an xml sitemap (typically located at https://example.com/sitemap.xml) and check for the presence of selectors on the pages linked in the sitemap. You can also use this on a localhost site, for example a ddev instance.
 
 ## Installation
