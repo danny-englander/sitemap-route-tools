@@ -1,4 +1,6 @@
-# Sitemap route tools
+# Sitemap Route Tools
+
+![Screenshot of the UI](screen.png)
 
 ## Introduiction
 Sitemap route tools can query an xml sitemap (typically located at https://example.com/sitemap.xml) and check for the presence of selectors on the pages linked in the sitemap.
