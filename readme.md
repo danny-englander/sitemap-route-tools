@@ -39,3 +39,10 @@ You will see the url in terminal: `http://localhost:3333`
 
 ## Debugging
 You can enable debugging by checking the "Debug" checkbox. This will log the server logs and the browser console to the terminal.
+
+## Roadmap
+- Specify the sitemap link if it differs from the standard `site.com/sitemap.xml` path
+- Determine a method to run a `ddev drush uli` command and have the app login if the site requires authentication
+- Show labels for form fields (better UX)
+- Make HTML placeholders more actionable
+- Make Selector field its own line
