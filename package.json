@@ -5,7 +5,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "tw:build": "tailwindcss -i ./src/tailwind.css -o ./public/tailwind.css",
-    "tw:watch": "tailwindcss -i ./src/tailwind.css -o ./public/tailwind.css --watch"
+    "tw:watch": "tailwindcss -i ./src/tailwind.css -o ./public/tailwind.css --watch",
+    "nsj": "node server.js"
   },
   "type": "module",
   "author": "",
