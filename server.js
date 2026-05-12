@@ -283,7 +283,7 @@ async function fetchAllUrls(baseUrl, onStatus = () => {}, dbg = () => {}) {
     onStatus(`Found ${sitemapUrls.length} child sitemap(s)...`);
 
     const errors = [];
-    const urlGroups = await mapWithConcurrency(sitemapUrls, 6, async (url, idx) => {
+    const urlGroups = await mapWithConcurrency(sitemapUrls, 8, async (url, idx) => {
       try {
         const subRes = await fetchSitemap(url, dbg);
         if (!subRes.ok) {
@@ -375,11 +375,11 @@ app.post("/scan", async (req, res) => {
     browser = await chromium.launch({ headless: true });
     const ignoreHTTPSErrors = allowInsecureTlsForUrl(siteUrl);
     const context = await browser.newContext({ ignoreHTTPSErrors });
-    const scanConcurrencyRaw = Number(process.env.SITEMAP_SCAN_CONCURRENCY || 6);
+    const scanConcurrencyRaw = Number(process.env.SITEMAP_SCAN_CONCURRENCY || 8);
     const scanConcurrency =
       Number.isFinite(scanConcurrencyRaw) && scanConcurrencyRaw > 0
         ? Math.floor(scanConcurrencyRaw)
-        : 6;
+        : 8;
     dbg("scan workers", scanConcurrency);
     send({ type: "status", message: `Scanning pages with ${scanConcurrency} worker(s)...` });
 
