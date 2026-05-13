@@ -1,299 +1,264 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sitemap route tools</title>
-    <link rel="icon" type="image/svg+xml" href="/hexagon.svg" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&display=swap"
-      rel="stylesheet"
-    />
-    <link id="tailwindStyles" rel="stylesheet" href="/tailwind.css" />
-    <style id="themeStyles">
-      :root {
-        --accent: #eab308;
-      }
 
-      body {
-        font-family: "Courier Prime", monospace;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sitemap route tools</title>
+  <link rel="icon" type="image/svg+xml" href="/hexagon.svg" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:ital,wght@0,400;0,700;1,400&display=swap"
+    rel="stylesheet" />
+  <link id="tailwindStyles" rel="stylesheet" href="/tailwind.css" />
+  <style id="themeStyles">
+    :root {
+      --accent: #eab308;
+    }
 
-      .font-display {
-        font-family: "Bebas Neue", sans-serif;
-      }
+    body {
+      font-family: "Courier Prime", monospace;
+    }
 
-      .theme-scroll::-webkit-scrollbar {
-        width: 6px;
-      }
+    .font-display {
+      font-family: "JetBrains Mono", monospace;
+    }
 
-      .theme-scroll::-webkit-scrollbar-track {
-        background: transparent;
-      }
+    .theme-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
 
-      .theme-scroll::-webkit-scrollbar-thumb {
-        background: #2a2a2a;
-        border-radius: 3px;
-      }
+    .theme-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
 
-      .theme-scroll::-webkit-scrollbar-thumb:hover {
-        background: #3a3a3a;
-      }
-    </style>
-  </head>
+    .theme-scroll::-webkit-scrollbar-thumb {
+      background: #2a2a2a;
+      border-radius: 3px;
+    }
 
-  <body class="min-h-screen bg-zinc-950 text-zinc-100">
-    <div class="flex min-h-screen flex-col">
-      <header
-        class="flex shrink-0 items-baseline gap-4 border-b border-zinc-800 bg-zinc-900 px-8 py-5"
-      >
-        <h1
-          class="font-display text-4xl leading-none tracking-widest text-yellow-500"
-        >
-          Sitemap route tools
-        </h1>
-        <h2 class="text-xs uppercase tracking-widest text-zinc-400">
-          Headless markup checker for websites
-        </h2>
-      </header>
+    .theme-scroll::-webkit-scrollbar-thumb:hover {
+      background: #3a3a3a;
+    }
+  </style>
+</head>
 
-      <div class="flex min-h-0 flex-1">
-        <aside
-          class="theme-scroll flex w-96 shrink-0 flex-col gap-6 overflow-y-auto border-r border-zinc-800 bg-zinc-900 px-6 py-7"
-        >
-          <div class="flex flex-col gap-2">
-            <label class="text-xs uppercase tracking-widest text-zinc-400"
-              >Site URL</label
-            >
-            <input
-              type="url"
-              id="siteUrl"
-              placeholder="http://mysite.ddev.site"
-              class="w-full border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-yellow-500"
-            />
-          </div>
+<body class="min-h-screen bg-zinc-950 text-zinc-100">
+  <div class="flex min-h-screen flex-col">
+    <header
+      class="flex shrink-0 items-baseline gap-4 border-b border-zinc-800 bg-zinc-900 px-8 py-5">
+      <h1
+        class="font-display text-4xl leading-none tracking-widest text-yellow-500">
+        Sitemap route tools
+      </h1>
+      <h2 class="text-xs tracking-widest text-zinc-400">
+        Headless markup checker for websites
+      </h2>
+    </header>
 
-          <div>
-            <div class="mb-3 flex items-center justify-between">
-              <span class="text-xs uppercase tracking-widest text-zinc-400"
-                >Selector Checks</span
-              >
-              <button
-                class="cursor-pointer border border-yellow-500 bg-yellow-500/10 px-3 py-1 text-xs tracking-widest text-yellow-500 transition hover:bg-yellow-500/20"
-                onclick="addCheck()"
-              >
-                + Add more checks
-              </button>
-            </div>
-            <div class="flex flex-col gap-2.5" id="checksList"></div>
-          </div>
+    <div class="flex min-h-0 flex-1">
+      <aside
+        class="theme-scroll flex w-96 shrink-0 flex-col gap-6 overflow-y-auto border-r border-zinc-800 bg-zinc-900 px-6 py-7">
+        <div class="flex flex-col gap-2">
+          <label class="text-xs uppercase tracking-widest text-zinc-400">Site
+            URL</label>
+          <input type="url" id="siteUrl" placeholder="http://mysite.ddev.site"
+            class="w-full border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-yellow-500" />
+        </div>
 
-          <label
-            class="flex cursor-pointer items-center gap-2 text-xs text-zinc-400"
-          >
-            <input type="checkbox" id="debugScan" class="accent-yellow-500" />
-            <span>Debug (server log + browser console)</span>
-          </label>
-
-          <button
-            id="runBtn"
-            onclick="runScan()"
-            class="font-display w-full cursor-pointer bg-yellow-500 px-4 py-3 text-2xl tracking-widest text-zinc-950 transition hover:-translate-y-px hover:opacity-90"
-          >
-            SCAN
-          </button>
-          <button
-            id="cancelBtn"
-            onclick="cancelScan()"
-            class="hidden w-full cursor-pointer border border-rose-400 px-3 py-2 text-xs tracking-widest text-rose-400"
-          >
-            CANCEL SCAN
-          </button>
-        </aside>
-
-        <main class="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div
-            class="flex shrink-0 items-center gap-5 border-b border-zinc-800 bg-zinc-900 px-6 py-3.5"
-          >
-            <div class="flex items-center gap-1.5 text-xs">
-              <div class="h-2 w-2 rounded-full bg-emerald-400"></div>
-              <span class="font-bold text-zinc-100" id="countPass">0</span>
-              <span class="text-zinc-400">hits</span>
-            </div>
-            <div class="flex items-center gap-1.5 text-xs">
-              <div class="h-2 w-2 rounded-full bg-rose-400"></div>
-              <span class="font-bold text-zinc-100" id="countFail">0</span>
-              <span class="text-zinc-400">misses</span>
-            </div>
-            <div class="flex items-center gap-1.5 text-xs">
-              <div class="h-2 w-2 rounded-full bg-orange-400"></div>
-              <span class="font-bold text-zinc-100" id="countError">0</span>
-              <span class="text-zinc-400">errors</span>
-            </div>
+        <div>
+          <div class="mb-3 flex items-center justify-between">
             <span
-              class="ml-auto text-xs italic tracking-widest text-zinc-400"
-              id="statusMsg"
-              >Configure checks and click SCAN</span
-            >
+              class="text-xs uppercase tracking-widest text-zinc-400">Selector
+              Checks</span>
             <button
-              id="exportBtn"
-              onclick="exportReport()"
-              disabled
-              class="cursor-pointer border border-zinc-700 px-3 py-1.5 text-xs tracking-widest text-zinc-400 transition hover:border-yellow-500 hover:text-yellow-500 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              EXPORT JSON
+              class="cursor-pointer border border-yellow-500 bg-yellow-500/10 px-3 py-1 text-xs tracking-widest text-yellow-500 transition hover:bg-yellow-500/20"
+              onclick="addCheck()">
+              + Add more checks
             </button>
           </div>
-          <div
-            class="theme-scroll flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-5"
-            id="resultsScroll"
-          >
-            <div
-              id="progressPanel"
-              class="hidden border border-zinc-800 bg-zinc-900 p-3.5"
-            >
-              <div
-                class="mb-2.5 flex justify-between gap-4 text-xs uppercase tracking-widest text-zinc-400"
-              >
-                <span id="progressLabel">Preparing scan…</span>
-                <span id="progressCount">0 / 0</span>
-              </div>
-              <div
-                class="h-2.5 overflow-hidden border border-zinc-800 bg-zinc-800"
-              >
-                <div
-                  class="h-full w-0 bg-gradient-to-r from-yellow-500/25 to-yellow-500 transition-all duration-200"
-                  id="progressFill"
-                ></div>
-              </div>
-            </div>
-            <div id="hitsContainer"></div>
+          <div class="flex flex-col gap-2.5" id="checksList"></div>
+        </div>
+
+        <label
+          class="flex cursor-pointer items-center gap-2 text-xs text-zinc-400">
+          <input type="checkbox" id="debugScan" class="accent-yellow-500" />
+          <span>Debug (server log + browser console)</span>
+        </label>
+
+        <button id="runBtn" onclick="runScan()"
+          class="font-display w-full cursor-pointer bg-yellow-500 px-4 py-3 text-2xl tracking-widest text-zinc-950 transition hover:-translate-y-px hover:opacity-90">
+          SCAN
+        </button>
+        <button id="cancelBtn" onclick="cancelScan()"
+          class="hidden w-full cursor-pointer border border-rose-400 px-3 py-2 text-xs tracking-widest text-rose-400">
+          CANCEL SCAN
+        </button>
+      </aside>
+
+      <main class="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div
+          class="flex shrink-0 items-center gap-5 border-b border-zinc-800 bg-zinc-900 px-6 py-3.5">
+          <div class="flex items-center gap-1.5 text-xs">
+            <div class="h-2 w-2 rounded-full bg-emerald-400"></div>
+            <span class="font-bold text-zinc-100" id="countPass">0</span>
+            <span class="text-zinc-400">hits</span>
           </div>
-        </main>
-      </div>
+          <div class="flex items-center gap-1.5 text-xs">
+            <div class="h-2 w-2 rounded-full bg-rose-400"></div>
+            <span class="font-bold text-zinc-100" id="countFail">0</span>
+            <span class="text-zinc-400">misses</span>
+          </div>
+          <div class="flex items-center gap-1.5 text-xs">
+            <div class="h-2 w-2 rounded-full bg-orange-400"></div>
+            <span class="font-bold text-zinc-100" id="countError">0</span>
+            <span class="text-zinc-400">errors</span>
+          </div>
+          <span class="ml-auto text-xs italic tracking-widest text-zinc-400"
+            id="statusMsg">Configure checks and click SCAN</span>
+          <button id="exportBtn" onclick="exportReport()" disabled
+            class="cursor-pointer border border-zinc-700 px-3 py-1.5 text-xs tracking-widest text-zinc-400 transition hover:border-yellow-500 hover:text-yellow-500 disabled:cursor-not-allowed disabled:opacity-40">
+            EXPORT JSON
+          </button>
+        </div>
+        <div
+          class="theme-scroll flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-5"
+          id="resultsScroll">
+          <div id="progressPanel"
+            class="hidden border border-zinc-800 bg-zinc-900 p-3.5">
+            <div
+              class="mb-2.5 flex justify-between gap-4 text-xs uppercase tracking-widest text-zinc-400">
+              <span id="progressLabel">Preparing scan…</span>
+              <span id="progressCount">0 / 0</span>
+            </div>
+            <div
+              class="h-2.5 overflow-hidden border border-zinc-800 bg-zinc-800">
+              <div
+                class="h-full w-0 bg-gradient-to-r from-yellow-500/25 to-yellow-500 transition-all duration-200"
+                id="progressFill"></div>
+            </div>
+          </div>
+          <div id="hitsContainer"></div>
+        </div>
+      </main>
     </div>
+  </div>
 
-    <script>
-      const SERVER = "http://localhost:3333";
-      let reportData = [];
-      let stats = {
-        pass: 0,
-        fail: 0,
-        error: 0,
-      };
-      let scanProgress = {
-        total: 0,
-        done: 0,
-      };
-      let hitRows = [];
-      let scanStartedAtMs = null;
-      let currentScanController = null;
-      let isScanning = false;
-      /** When true, log each SSE payload to the browser console (checkbox or ?debug=1). */
-      let clientScanDebug = false;
+  <script>
+    const SERVER = "http://localhost:3333";
+    let reportData = [];
+    let stats = {
+      pass: 0,
+      fail: 0,
+      error: 0,
+    };
+    let scanProgress = {
+      total: 0,
+      done: 0,
+    };
+    let hitRows = [];
+    let scanStartedAtMs = null;
+    let currentScanController = null;
+    let isScanning = false;
+    /** When true, log each SSE payload to the browser console (checkbox or ?debug=1). */
+    let clientScanDebug = false;
 
-      function formatSeconds(elapsedMs) {
-        return (Math.max(0, elapsedMs) / 1000).toFixed(1);
-      }
+    function formatSeconds(elapsedMs) {
+      return (Math.max(0, elapsedMs) / 1000).toFixed(1);
+    }
 
-      // ── Default checks ──────────────────────────────────────────────────────────
-      const defaults = [
-        {
-          label: "",
-          selector: "",
-          expected: "present",
-          excludeWithin: "",
-        },
-      ];
+    // ── Default checks ──────────────────────────────────────────────────────────
+    const defaults = [
+      {
+        label: "",
+        selector: "",
+        expected: "present",
+        excludeWithin: "",
+      },
+    ];
 
-      function addCheck(data = {}) {
-        const id = Date.now();
-        const list = document.getElementById("checksList");
-        const card = document.createElement("div");
-        card.className =
-          "check-card relative grid gap-2 border border-zinc-800 bg-zinc-800 p-3";
-        card.dataset.id = id;
-        card.innerHTML = `
+    function addCheck(data = {}) {
+      const id = Date.now();
+      const list = document.getElementById("checksList");
+      const card = document.createElement("div");
+      card.className =
+        "check-card relative grid gap-2 border border-zinc-800 bg-zinc-800 p-3";
+      card.dataset.id = id;
+      card.innerHTML = `
       <button class="absolute right-2 top-0 h-7 w-7 cursor-pointer rounded-full bg-yellow-500 pb-px text-2xl leading-none text-zinc-950 transition hover:text-rose-400" onclick="removeCheck(${id})" title="Remove">×</button>
       <input class="w-full border border-zinc-700 bg-zinc-950 px-2.5 py-2 text-xs text-zinc-100 outline-none transition focus:border-yellow-500" type="text" placeholder="Label (e.g. Has cookie banner)" value="${data.label || ""}" data-field="label" />
       <div class="grid grid-cols-2 gap-2">
         <input class="w-full border border-zinc-700 bg-zinc-950 px-2.5 py-2 text-xs text-zinc-100 outline-none transition focus:border-yellow-500" type="text" placeholder="Selector; top-level comma = OR (e.g. .a, #b)" value="${data.selector || ""}" data-field="selector" />
         <select class="w-full border border-zinc-700 bg-zinc-950 px-2.5 py-2 text-xs text-zinc-100 outline-none transition focus:border-yellow-500" data-field="expected">
-          <option value="present" ${
-            data.expected === "present" ? "selected" : ""
-          }>Present</option>
-          <option value="absent"  ${
-            data.expected === "absent" ? "selected" : ""
-          }>Absent</option>
-          <option value="custom"  ${
-            data.expected &&
-            data.expected !== "present" &&
-            data.expected !== "absent"
-              ? "selected"
-              : ""
-          }>Contains text…</option>
+          <option value="present" ${data.expected === "present" ? "selected" : ""
+        }>Present</option>
+          <option value="absent"  ${data.expected === "absent" ? "selected" : ""
+        }>Absent</option>
+          <option value="custom"  ${data.expected &&
+          data.expected !== "present" &&
+          data.expected !== "absent"
+          ? "selected"
+          : ""
+        }>Contains text…</option>
         </select>
       </div>
       <input class="w-full border border-zinc-700 bg-zinc-950 px-2.5 py-2 text-xs text-zinc-100 outline-none transition focus:border-yellow-500" type="text" placeholder="Exclude if inside (optional; comma = OR, e.g. #flyout, #modal, .drawer)" value="${data.excludeWithin || ""}" data-field="excludeWithin" />
-      <input class="w-full border border-zinc-700 bg-zinc-950 px-2.5 py-2 text-xs text-zinc-100 outline-none transition focus:border-yellow-500" type="text" placeholder='Text to find in element' data-field="textMatch" style="display:${
-        data.expected &&
-        data.expected !== "present" &&
-        data.expected !== "absent"
+      <input class="w-full border border-zinc-700 bg-zinc-950 px-2.5 py-2 text-xs text-zinc-100 outline-none transition focus:border-yellow-500" type="text" placeholder='Text to find in element' data-field="textMatch" style="display:${data.expected &&
+          data.expected !== "present" &&
+          data.expected !== "absent"
           ? "block"
           : "none"
-      }" value="${
-        data.expected &&
-        data.expected !== "present" &&
-        data.expected !== "absent"
+        }" value="${data.expected &&
+          data.expected !== "present" &&
+          data.expected !== "absent"
           ? data.expected
           : ""
-      }" />
+        }" />
     `;
-        card
-          .querySelector('[data-field="expected"]')
-          .addEventListener("change", function () {
-            card.querySelector('[data-field="textMatch"]').style.display =
-              this.value === "custom" ? "block" : "none";
-          });
-        list.appendChild(card);
-      }
+      card
+        .querySelector('[data-field="expected"]')
+        .addEventListener("change", function () {
+          card.querySelector('[data-field="textMatch"]').style.display =
+            this.value === "custom" ? "block" : "none";
+        });
+      list.appendChild(card);
+    }
 
-      function removeCheck(id) {
-        document.querySelector(`.check-card[data-id="${id}"]`)?.remove();
-      }
+    function removeCheck(id) {
+      document.querySelector(`.check-card[data-id="${id}"]`)?.remove();
+    }
 
-      function getChecks() {
-        return [...document.querySelectorAll(".check-card")]
-          .map((card) => {
-            const label = card
-              .querySelector('[data-field="label"]')
-              .value.trim();
-            const selector = card
-              .querySelector('[data-field="selector"]')
-              .value.trim();
-            const expSel = card.querySelector('[data-field="expected"]').value;
-            const textMatch = card
-              .querySelector('[data-field="textMatch"]')
-              .value.trim();
-            return {
-              label: label || selector,
-              selector,
-              expected: expSel === "custom" ? textMatch : expSel,
-              excludeWithin: card
-                .querySelector('[data-field="excludeWithin"]')
-                .value.trim(),
-            };
-          })
-          .filter((c) => c.selector);
-      }
+    function getChecks() {
+      return [...document.querySelectorAll(".check-card")]
+        .map((card) => {
+          const label = card
+            .querySelector('[data-field="label"]')
+            .value.trim();
+          const selector = card
+            .querySelector('[data-field="selector"]')
+            .value.trim();
+          const expSel = card.querySelector('[data-field="expected"]').value;
+          const textMatch = card
+            .querySelector('[data-field="textMatch"]')
+            .value.trim();
+          return {
+            label: label || selector,
+            selector,
+            expected: expSel === "custom" ? textMatch : expSel,
+            excludeWithin: card
+              .querySelector('[data-field="excludeWithin"]')
+              .value.trim(),
+          };
+        })
+        .filter((c) => c.selector);
+    }
 
-      function hasHit(results) {
-        return results.some((r) => r.status === "pass");
-      }
+    function hasHit(results) {
+      return results.some((r) => r.status === "pass");
+    }
 
-      function showInitialMessage(message) {
-        const container = document.getElementById("hitsContainer");
-        container.innerHTML = `
+    function showInitialMessage(message) {
+      const container = document.getElementById("hitsContainer");
+      container.innerHTML = `
       <div class="flex flex-1 flex-col items-center justify-center gap-3 p-10 text-center text-zinc-400">
         <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
           <rect x="8" y="6" width="32" height="36" rx="2" stroke="#e4e4e7" stroke-width="2" opacity="0.22"/>
@@ -302,32 +267,32 @@
         <p class="text-sm leading-relaxed">${message}</p>
       </div>
     `;
+    }
+
+    function setProgress(done, total) {
+      const pct =
+        total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+      document.getElementById("progressFill").style.width = `${pct}%`;
+      document.getElementById("progressCount").textContent =
+        `${done} / ${total}`;
+    }
+
+    function renderHitsTable(
+      emptyMessage = "Scan complete.<br/>No hit URLs matched your checks.",
+    ) {
+      const container = document.getElementById("hitsContainer");
+      container.innerHTML = "";
+
+      if (!hitRows.length) {
+        showInitialMessage(emptyMessage);
+        return;
       }
 
-      function setProgress(done, total) {
-        const pct =
-          total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
-        document.getElementById("progressFill").style.width = `${pct}%`;
-        document.getElementById("progressCount").textContent =
-          `${done} / ${total}`;
-      }
-
-      function renderHitsTable(
-        emptyMessage = "Scan complete.<br/>No hit URLs matched your checks.",
-      ) {
-        const container = document.getElementById("hitsContainer");
-        container.innerHTML = "";
-
-        if (!hitRows.length) {
-          showInitialMessage(emptyMessage);
-          return;
-        }
-
-        const wrap = document.createElement("div");
-        wrap.className = "overflow-hidden border border-zinc-800 bg-zinc-900";
-        const table = document.createElement("table");
-        table.className = "w-full border-collapse text-xs";
-        table.innerHTML = `
+      const wrap = document.createElement("div");
+      wrap.className = "overflow-hidden border border-zinc-800 bg-zinc-900";
+      const table = document.createElement("table");
+      table.className = "w-full border-collapse text-xs";
+      table.innerHTML = `
       <thead class="bg-zinc-800">
         <tr>
           <th class="border-b border-zinc-800 px-3 py-2.5 text-left text-xs font-normal uppercase tracking-widest text-zinc-400" style="width:56px">#</th>
@@ -339,257 +304,255 @@
       <tbody></tbody>
     `;
 
-        const tbody = table.querySelector("tbody");
-        hitRows.forEach((row, idx) => {
-          const tr = document.createElement("tr");
-          if (idx % 2 === 1) tr.className = "bg-white/5";
-          const excludeWithinHtml = row.passResults
-            .map((r) => r.excludeWithin || "-")
-            .join("<br/>");
-          const detailHtml = row.passResults
-            .map((r) => r.detail || "-")
-            .join("<br/>");
-          tr.innerHTML = `
+      const tbody = table.querySelector("tbody");
+      hitRows.forEach((row, idx) => {
+        const tr = document.createElement("tr");
+        if (idx % 2 === 1) tr.className = "bg-white/5";
+        const excludeWithinHtml = row.passResults
+          .map((r) => r.excludeWithin || "-")
+          .join("<br/>");
+        const detailHtml = row.passResults
+          .map((r) => r.detail || "-")
+          .join("<br/>");
+        tr.innerHTML = `
         <td class="border-b border-zinc-800 px-3 py-2.5 text-zinc-100">${idx + 1}</td>
         <td class="border-b border-zinc-800 px-3 py-2.5 text-zinc-100"><a class="break-all text-yellow-500 hover:underline" href="${row.url}" target="_blank" rel="noopener noreferrer">${row.url}</a></td>
         <td class="border-b border-zinc-800 px-3 py-2.5 text-zinc-300">${excludeWithinHtml}</td>
         <td class="border-b border-zinc-800 px-3 py-2.5 text-zinc-300">${detailHtml}</td>
       `;
-          tbody.appendChild(tr);
-        });
+        tbody.appendChild(tr);
+      });
 
-        wrap.appendChild(table);
-        container.appendChild(wrap);
+      wrap.appendChild(table);
+      container.appendChild(wrap);
+    }
+
+    function setScanningState(scanning) {
+      isScanning = scanning;
+      const runBtn = document.getElementById("runBtn");
+      const cancelBtn = document.getElementById("cancelBtn");
+
+      runBtn.textContent = scanning ? "SCANNING…" : "SCAN";
+      runBtn.disabled = scanning;
+      runBtn.className = scanning
+        ? "font-display w-full cursor-not-allowed border border-yellow-500 bg-zinc-800 px-4 py-3 text-2xl tracking-widest text-yellow-500 animate-pulse opacity-80"
+        : "font-display w-full cursor-pointer bg-yellow-500 px-4 py-3 text-2xl tracking-widest text-zinc-950 transition hover:-translate-y-px hover:opacity-90";
+
+      cancelBtn.classList.toggle("hidden", !scanning);
+      cancelBtn.disabled = false;
+    }
+
+    // ── Scan ────────────────────────────────────────────────────────────────────
+    async function runScan() {
+      if (isScanning) return;
+      const siteUrl = document
+        .getElementById("siteUrl")
+        .value.trim()
+        .replace(/\/$/, "");
+      const checks = getChecks();
+
+      if (!siteUrl) {
+        alert("Please enter a DDEV site URL.");
+        return;
+      }
+      if (!checks.length) {
+        alert("Please add at least one check.");
+        return;
       }
 
-      function setScanningState(scanning) {
-        isScanning = scanning;
-        const runBtn = document.getElementById("runBtn");
-        const cancelBtn = document.getElementById("cancelBtn");
-
-        runBtn.textContent = scanning ? "SCANNING…" : "SCAN";
-        runBtn.disabled = scanning;
-        runBtn.className = scanning
-          ? "font-display w-full cursor-not-allowed border border-yellow-500 bg-zinc-800 px-4 py-3 text-2xl tracking-widest text-yellow-500 animate-pulse opacity-80"
-          : "font-display w-full cursor-pointer bg-yellow-500 px-4 py-3 text-2xl tracking-widest text-zinc-950 transition hover:-translate-y-px hover:opacity-90";
-
-        cancelBtn.classList.toggle("hidden", !scanning);
-        cancelBtn.disabled = false;
-      }
-
-      // ── Scan ────────────────────────────────────────────────────────────────────
-      async function runScan() {
-        if (isScanning) return;
-        const siteUrl = document
-          .getElementById("siteUrl")
-          .value.trim()
-          .replace(/\/$/, "");
-        const checks = getChecks();
-
-        if (!siteUrl) {
-          alert("Please enter a DDEV site URL.");
-          return;
-        }
-        if (!checks.length) {
-          alert("Please add at least one check.");
-          return;
-        }
-
-        // Reset state
-        reportData = [];
-        hitRows = [];
-        stats = {
-          pass: 0,
-          fail: 0,
-          error: 0,
-        };
-        scanProgress = {
-          total: 0,
-          done: 0,
-        };
-        updateStats();
-        document.getElementById("exportBtn").disabled = true;
-        document.getElementById("progressPanel").classList.remove("hidden");
-        document.getElementById("progressLabel").textContent =
-          "Preparing scan…";
-        setProgress(0, 0);
-        showInitialMessage(
-          "Scanning in progress…<br/>Results table will appear when complete.",
-        );
-        currentScanController = new AbortController();
-        scanStartedAtMs = Date.now();
-
-        setScanningState(true);
-
-        setStatus("Connecting to local server…");
-
-        clientScanDebug =
-          document.getElementById("debugScan")?.checked === true;
-        if (clientScanDebug)
-          console.log("[scan] POST /scan", { siteUrl, checks: checks.length });
-
-        try {
-          const response = await fetch(`${SERVER}/scan`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ siteUrl, checks, debug: clientScanDebug }),
-            signal: currentScanController.signal,
-          });
-
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          let buffer = "";
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop();
-            for (const line of lines) {
-              if (line.startsWith("data: ")) {
-                handleEvent(JSON.parse(line.slice(6)));
-              }
-            }
-          }
-        } catch (e) {
-          if (e.name === "AbortError") {
-            document.getElementById("progressLabel").textContent =
-              "Scan cancelled";
-            setStatus(
-              `Scan cancelled — ${reportData.length} page${
-                reportData.length === 1 ? "" : "s"
-              } checked`,
-            );
-            renderHitsTable(
-              "Scan cancelled.<br/>No hit URLs found before cancellation.",
-            );
-          } else {
-            setStatus(
-              `⚠ Could not reach local server at ${SERVER}. Is it running?`,
-            );
-          }
-        } finally {
-          currentScanController = null;
-          setScanningState(false);
-          document.getElementById("exportBtn").disabled = hitRows.length === 0;
-        }
-      }
-
-      function cancelScan() {
-        if (!isScanning || !currentScanController) return;
-        document.getElementById("cancelBtn").disabled = true;
-        setStatus("Cancelling scan…");
-        currentScanController.abort();
-      }
-
-      // ── SSE event handler ───────────────────────────────────────────────────────
-      function handleEvent(ev) {
-        if (clientScanDebug) console.log("[scan SSE]", ev.type, ev);
-        if (ev.type === "status") setStatus(ev.message);
-        if (ev.type === "urls_found") {
-          scanProgress.total = ev.count;
-          document.getElementById("progressLabel").textContent =
-            "Scanning URLs…";
-          setProgress(scanProgress.done, scanProgress.total);
-          setStatus(`Found ${ev.count} URLs — scanning…`);
-        }
-
-        if (ev.type === "page_done") {
-          reportData.push({ url: ev.url, results: ev.results });
-          ev.results.forEach((r) => {
-            if (r.status === "pass") stats.pass++;
-            if (r.status === "fail") stats.fail++;
-            if (r.status === "error") stats.error++;
-          });
-          scanProgress.done++;
-          setProgress(scanProgress.done, scanProgress.total);
-          updateStats();
-
-          if (hasHit(ev.results)) {
-            const passResults = ev.results.filter((r) => r.status === "pass");
-            hitRows.push({ url: ev.url, passResults });
-          }
-        }
-
-        if (ev.type === "complete") {
-          const elapsedSeconds =
-            scanStartedAtMs == null
-              ? null
-              : formatSeconds(Date.now() - scanStartedAtMs);
-          document.getElementById("progressLabel").textContent =
-            "Scan complete";
-          setStatus(
-            elapsedSeconds == null
-              ? `Scan complete — ${reportData.length} pages checked, ${hitRows.length} hit URL${
-                  hitRows.length === 1 ? "" : "s"
-                }`
-              : `The scan finished in ${elapsedSeconds} seconds — ${reportData.length} pages checked, ${hitRows.length} hit URL${
-                  hitRows.length === 1 ? "" : "s"
-                }`,
-          );
-          renderHitsTable();
-        }
-        if (ev.type === "error") setStatus(`⚠ Error: ${ev.message}`);
-      }
-
-      function setStatus(msg) {
-        document.getElementById("statusMsg").textContent = msg;
-      }
-      function updateStats() {
-        document.getElementById("countPass").textContent = stats.pass;
-        document.getElementById("countFail").textContent = stats.fail;
-        document.getElementById("countError").textContent = stats.error;
-      }
-
-      // ── Export ───────────────────────────────────────────────────────────────────
-      function exportReport() {
-        const hitsOnly = reportData
-          .filter((entry) => hasHit(entry.results))
-          .map((entry) => ({
-            url: entry.url,
-            results: entry.results.filter((r) => r.status === "pass"),
-          }));
-        const blob = new Blob([JSON.stringify(hitsOnly, null, 2)], {
-          type: "application/json",
-        });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-        a.download = `sitemap-hits-${timestamp}.json`;
-        a.click();
-      }
-
-      function setupStyleHmr() {
-        const tailwindLink = document.getElementById("tailwindStyles");
-        if (!tailwindLink || !window.EventSource) return;
-
-        const hmr = new EventSource("/hmr");
-        hmr.onmessage = (evt) => {
-          try {
-            const payload = JSON.parse(evt.data);
-            if (payload.type === "tailwind_update" && tailwindLink) {
-              const baseHref = "/tailwind.css";
-              tailwindLink.setAttribute("href", `${baseHref}?v=${Date.now()}`);
-            }
-          } catch {
-            // Ignore malformed HMR payloads.
-          }
-        };
-      }
-
-      // ── Init ─────────────────────────────────────────────────────────────────────
-      if (new URLSearchParams(location.search).get("debug") === "1") {
-        const dbgEl = document.getElementById("debugScan");
-        if (dbgEl) dbgEl.checked = true;
-      }
+      // Reset state
+      reportData = [];
+      hitRows = [];
+      stats = {
+        pass: 0,
+        fail: 0,
+        error: 0,
+      };
+      scanProgress = {
+        total: 0,
+        done: 0,
+      };
+      updateStats();
+      document.getElementById("exportBtn").disabled = true;
+      document.getElementById("progressPanel").classList.remove("hidden");
+      document.getElementById("progressLabel").textContent =
+        "Preparing scan…";
+      setProgress(0, 0);
       showInitialMessage(
-        "No results yet.<br/>Enter your DDEV site URL, add selector checks,<br/>and click <strong>SCAN</strong>.",
+        "Scanning in progress…<br/>Results table will appear when complete.",
       );
-      setupStyleHmr();
-      defaults.forEach(addCheck);
-    </script>
-  </body>
+      currentScanController = new AbortController();
+      scanStartedAtMs = Date.now();
+
+      setScanningState(true);
+
+      setStatus("Connecting to local server…");
+
+      clientScanDebug =
+        document.getElementById("debugScan")?.checked === true;
+      if (clientScanDebug)
+        console.log("[scan] POST /scan", { siteUrl, checks: checks.length });
+
+      try {
+        const response = await fetch(`${SERVER}/scan`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ siteUrl, checks, debug: clientScanDebug }),
+          signal: currentScanController.signal,
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop();
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              handleEvent(JSON.parse(line.slice(6)));
+            }
+          }
+        }
+      } catch (e) {
+        if (e.name === "AbortError") {
+          document.getElementById("progressLabel").textContent =
+            "Scan cancelled";
+          setStatus(
+            `Scan cancelled — ${reportData.length} page${reportData.length === 1 ? "" : "s"
+            } checked`,
+          );
+          renderHitsTable(
+            "Scan cancelled.<br/>No hit URLs found before cancellation.",
+          );
+        } else {
+          setStatus(
+            `⚠ Could not reach local server at ${SERVER}. Is it running?`,
+          );
+        }
+      } finally {
+        currentScanController = null;
+        setScanningState(false);
+        document.getElementById("exportBtn").disabled = hitRows.length === 0;
+      }
+    }
+
+    function cancelScan() {
+      if (!isScanning || !currentScanController) return;
+      document.getElementById("cancelBtn").disabled = true;
+      setStatus("Cancelling scan…");
+      currentScanController.abort();
+    }
+
+    // ── SSE event handler ───────────────────────────────────────────────────────
+    function handleEvent(ev) {
+      if (clientScanDebug) console.log("[scan SSE]", ev.type, ev);
+      if (ev.type === "status") setStatus(ev.message);
+      if (ev.type === "urls_found") {
+        scanProgress.total = ev.count;
+        document.getElementById("progressLabel").textContent =
+          "Scanning URLs…";
+        setProgress(scanProgress.done, scanProgress.total);
+        setStatus(`Found ${ev.count} URLs — scanning…`);
+      }
+
+      if (ev.type === "page_done") {
+        reportData.push({ url: ev.url, results: ev.results });
+        ev.results.forEach((r) => {
+          if (r.status === "pass") stats.pass++;
+          if (r.status === "fail") stats.fail++;
+          if (r.status === "error") stats.error++;
+        });
+        scanProgress.done++;
+        setProgress(scanProgress.done, scanProgress.total);
+        updateStats();
+
+        if (hasHit(ev.results)) {
+          const passResults = ev.results.filter((r) => r.status === "pass");
+          hitRows.push({ url: ev.url, passResults });
+        }
+      }
+
+      if (ev.type === "complete") {
+        const elapsedSeconds =
+          scanStartedAtMs == null
+            ? null
+            : formatSeconds(Date.now() - scanStartedAtMs);
+        document.getElementById("progressLabel").textContent =
+          "Scan complete";
+        setStatus(
+          elapsedSeconds == null
+            ? `Scan complete — ${reportData.length} pages checked, ${hitRows.length} hit URL${hitRows.length === 1 ? "" : "s"
+            }`
+            : `The scan finished in ${elapsedSeconds} seconds — ${reportData.length} pages checked, ${hitRows.length} hit URL${hitRows.length === 1 ? "" : "s"
+            }`,
+        );
+        renderHitsTable();
+      }
+      if (ev.type === "error") setStatus(`⚠ Error: ${ev.message}`);
+    }
+
+    function setStatus(msg) {
+      document.getElementById("statusMsg").textContent = msg;
+    }
+    function updateStats() {
+      document.getElementById("countPass").textContent = stats.pass;
+      document.getElementById("countFail").textContent = stats.fail;
+      document.getElementById("countError").textContent = stats.error;
+    }
+
+    // ── Export ───────────────────────────────────────────────────────────────────
+    function exportReport() {
+      const hitsOnly = reportData
+        .filter((entry) => hasHit(entry.results))
+        .map((entry) => ({
+          url: entry.url,
+          results: entry.results.filter((r) => r.status === "pass"),
+        }));
+      const blob = new Blob([JSON.stringify(hitsOnly, null, 2)], {
+        type: "application/json",
+      });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      a.download = `sitemap-hits-${timestamp}.json`;
+      a.click();
+    }
+
+    function setupStyleHmr() {
+      const tailwindLink = document.getElementById("tailwindStyles");
+      if (!tailwindLink || !window.EventSource) return;
+
+      const hmr = new EventSource("/hmr");
+      hmr.onmessage = (evt) => {
+        try {
+          const payload = JSON.parse(evt.data);
+          if (payload.type === "tailwind_update" && tailwindLink) {
+            const baseHref = "/tailwind.css";
+            tailwindLink.setAttribute("href", `${baseHref}?v=${Date.now()}`);
+          }
+        } catch {
+          // Ignore malformed HMR payloads.
+        }
+      };
+    }
+
+    // ── Init ─────────────────────────────────────────────────────────────────────
+    if (new URLSearchParams(location.search).get("debug") === "1") {
+      const dbgEl = document.getElementById("debugScan");
+      if (dbgEl) dbgEl.checked = true;
+    }
+    showInitialMessage(
+      "No results yet.<br/>Enter your DDEV site URL, add selector checks,<br/>and click <strong>SCAN</strong>.",
+    );
+    setupStyleHmr();
+    defaults.forEach(addCheck);
+  </script>
+</body>
+
 </html>
